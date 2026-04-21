@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Editorial Intelligence | The Digital Curator</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-container-low": "#efefff",
+          "background": "#f7f5ff",
+          "surface": "#f7f5ff",
+          "on-primary": "#f0f2ff",
+          "primary-container": "#6d9fff",
+          "primary-fixed": "#6d9fff",
+          "primary-fixed-dim": "#5291ff",
+          "surface-dim": "#cad2ff",
+          "secondary-container": "#c7cfff",
+          "primary-dim": "#004ca5",
+          "primary": "#0058bc",
+          "on-surface": "#232c51",
+          "surface-bright": "#f7f5ff",
+          "secondary": "#3953b7",
+          "on-secondary-container": "#213ea2",
+          "outline": "#6c759e",
+          "surface-container-highest": "#d5dbff",
+          "surface-container-lowest": "#ffffff",
+          "on-error-container": "#570008",
+          "surface-container": "#e4e7ff",
+          "on-secondary": "#f2f1ff",
+          "on-primary-container": "#00214f",
+          "surface-tint": "#0058bc",
+          "outline-variant": "#a2abd7",
+          "on-surface-variant": "#515981",
+          "secondary-dim": "#2b47ab",
+          "surface-container-high": "#dde1ff",
+        },
+        borderRadius: {
+          DEFAULT: "0.5rem",
+          lg: "0.5rem",
+          xl: "0.75rem",
+          full: "9999px",
+        },
+        fontFamily: {
+          headline: ["Plus Jakarta Sans"],
+          body: ["Inter"],
+          label: ["Inter"],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; background: #f7f5ff; color: #232c51; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .editorial-shadow { box-shadow: 0 12px 32px rgba(35, 44, 81, 0.06); }
+  .summarize-btn { background: linear-gradient(135deg, #0058bc, #004ca5); }
+  .summarize-btn:hover { filter: brightness(1.08); }
+  .summarize-btn:active { transform: scale(0.98); }
+
+  .tab-btn.active { background: #ffffff; color: #0058bc; font-weight: 700; box-shadow: 0 4px 12px rgba(35,44,81,0.07); }
+  .tab-btn { transition: all 0.2s; }
+
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #e4e7ff 25%, #efefff 50%, #e4e7ff 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+  }
+
+  .point-item { animation: fadeSlideIn 0.4s ease both; }
+  .hier-section { animation: fadeSlideIn 0.4s ease both; }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .visual-node { transition: transform 0.2s, box-shadow 0.2s; }
+  .visual-node:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(0,88,188,0.18); }
+
+  #copy-toast { transition: opacity 0.3s; pointer-events: none; }
+
+  .count-ok   { color: #515981; }
+  .count-warn { color: #b31b25; }
+
+  #input-text:focus {
+    outline: none;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(0,88,188,0.20);
+  }
+
+  #output-content { transition: opacity 0.25s; }
+  #output-content.fading { opacity: 0; }
+
+  .nav-link.active { color: #0058bc; font-weight: 700; border-bottom: 2px solid #0058bc; }
+  .sidebar-link.active { background: rgba(0,88,188,0.10); color: #0058bc; font-weight: 700; }
+
+  /* Auth modal animation */
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .modal-card { animation: modalIn 0.25s ease both; }
+
+  /* Spin utility for loading icon */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .animate-spin { animation: spin 1s linear infinite; display: inline-block; }
+
+  /* Input focus styles for auth modal */
+  .auth-input:focus {
+    outline: none;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(0,88,188,0.20);
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="auth-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4"
+     style="background:rgba(35,44,81,0.45);backdrop-filter:blur(10px);">
+  <div class="modal-card bg-white rounded-2xl p-8 w-full max-w-sm editorial-shadow">
+
+    <!-- Logo row -->
+    <div class="flex items-center gap-2 mb-6">
+      <span class="material-symbols-outlined text-[#0058bc] text-2xl">auto_awesome</span>
+      <span class="font-['Plus_Jakarta_Sans'] font-black text-lg text-[#232c51]">Editorial Intelligence</span>
+    </div>
+
+    <!-- Tab toggle: Login / Register -->
+    <div class="flex bg-[#efefff] rounded-xl p-1 mb-6">
+      <button id="tab-login" onclick="setAuthTab('login')"
+        class="flex-1 py-2 rounded-lg text-sm font-semibold text-[#0058bc] bg-white shadow-sm transition-all">
+        Sign in
+      </button>
+      <button id="tab-register" onclick="setAuthTab('register')"
+        class="flex-1 py-2 rounded-lg text-sm font-semibold text-[#515981] transition-all">
+        Register
+      </button>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <input id="auth-email" type="email" placeholder="Email address"
+        class="auth-input w-full bg-[#efefff] border-none rounded-xl px-4 py-3 text-sm text-[#232c51] transition-all"/>
+
+      <input id="auth-password" type="password" placeholder="Password"
+        class="auth-input w-full bg-[#efefff] border-none rounded-xl px-4 py-3 text-sm text-[#232c51] transition-all"/>
+
+      <!-- Error message -->
+      <p id="auth-error" class="hidden text-red-500 text-xs text-center px-1"></p>
+
+      <button id="auth-submit-btn" onclick="handleAuthSubmit()"
+        class="summarize-btn w-full py-3 text-white font-['Plus_Jakarta_Sans'] font-bold rounded-xl text-sm mt-1 flex items-center justify-center gap-2 transition-all">
+        Sign in
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-[#515981] mt-4">
+      Your summaries are private and secured with JWT.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOP BAR
+     ═══════════════════════════════════════════════════════════════ -->
+<header class="fixed top-0 z-40 w-full px-6 md:px-8 py-4 flex justify-between items-center"
+        style="background:rgba(247,245,255,0.92);backdrop-filter:blur(12px);">
+  <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-[#0058bc] text-2xl">auto_awesome</span>
+    <h1 class="font-['Plus_Jakarta_Sans'] font-black text-xl text-[#232c51] tracking-tight">Editorial Intelligence</h1>
+  </div>
+  <nav class="hidden md:flex items-center gap-8">
+    <a href="#" class="nav-link active text-sm font-['Inter'] pb-0.5 transition-colors duration-200">Dashboard</a>
+    <a href="#" class="nav-link text-sm font-['Inter'] text-[#232c51] opacity-60 hover:opacity-100 hover:text-[#0058bc] transition-all duration-200">Library</a>
+    <a href="#" class="nav-link text-sm font-['Inter'] text-[#232c51] opacity-60 hover:opacity-100 hover:text-[#0058bc] transition-all duration-200">History</a>
+    <a href="#" class="nav-link text-sm font-['Inter'] text-[#232c51] opacity-60 hover:opacity-100 hover:text-[#0058bc] transition-all duration-200">Settings</a>
+  </nav>
+  <div class="flex items-center gap-3">
+    <button class="material-symbols-outlined text-[#515981] hover:text-[#0058bc] transition-colors">search</button>
+    <!-- Avatar + logout -->
+    <div class="flex items-center gap-2">
+      <div id="user-avatar"
+           class="w-9 h-9 rounded-full bg-[#6d9fff] flex items-center justify-center text-white font-bold text-sm cursor-default select-none">
+        ?
+      </div>
+      <button id="logout-btn" onclick="doLogout()"
+        class="hidden text-xs text-[#515981] hover:text-red-500 transition-colors font-medium">
+        Sign out
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════════════════════════════════ -->
+<aside class="fixed left-0 top-0 h-screen w-64 p-6 pt-24 bg-[#efefff] hidden lg:flex flex-col rounded-r-xl"
+       style="box-shadow:4px 0 24px rgba(35,44,81,0.04);">
+  <div class="mb-10">
+    <h2 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[#0058bc] text-xs uppercase tracking-widest">
+      The Digital Curator
+    </h2>
+  </div>
+  <div class="flex flex-col gap-1">
+    <a href="#" class="sidebar-link active flex items-center gap-4 px-4 py-3 rounded-lg text-sm transition-all duration-200">
+      <span class="material-symbols-outlined text-xl">dashboard</span><span>Dashboard</span>
+    </a>
+    <a href="#" class="sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg text-sm text-[#232c51] hover:bg-white/60 transition-all duration-200">
+      <span class="material-symbols-outlined text-xl">folder_open</span><span>Library</span>
+    </a>
+    <a href="#" class="sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg text-sm text-[#232c51] hover:bg-white/60 transition-all duration-200">
+      <span class="material-symbols-outlined text-xl">history</span><span>History</span>
+    </a>
+    <a href="#" class="sidebar-link flex items-center gap-4 px-4 py-3 rounded-lg text-sm text-[#232c51] hover:bg-white/60 transition-all duration-200">
+      <span class="material-symbols-outlined text-xl">settings</span><span>Settings</span>
+    </a>
+  </div>
+
+  <!-- Session stats -->
+  <div class="mt-auto">
+    <div class="bg-white/70 rounded-xl p-4 editorial-shadow">
+      <p class="text-xs text-[#515981] uppercase tracking-widest font-semibold mb-3">Session Stats</p>
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-xs text-[#515981]">Summaries</span>
+        <span id="stat-count" class="text-sm font-bold text-[#0058bc]">0</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span class="text-xs text-[#515981]">Words processed</span>
+        <span id="stat-words" class="text-sm font-bold text-[#0058bc]">0</span>
+      </div>
+    </div>
+
+    <!-- Logged-in user pill -->
+    <div id="user-pill" class="hidden mt-3 bg-white/70 rounded-xl px-4 py-3 editorial-shadow flex items-center gap-3">
+      <div class="w-7 h-7 rounded-full bg-[#6d9fff] flex items-center justify-center text-white text-xs font-bold" id="pill-avatar">?</div>
+      <p id="pill-email" class="text-xs text-[#515981] truncate flex-1"></p>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN
+     ═══════════════════════════════════════════════════════════════ -->
+<main class="lg:ml-64 pt-24 pb-20 px-5 md:px-12 min-h-screen">
+  <div class="max-w-6xl mx-auto">
+
+    <!-- HERO -->
+    <header class="mb-12 mt-4">
+      <h2 class="font-['Plus_Jakarta_Sans'] text-5xl font-extrabold text-[#232c51] tracking-tight mb-3 leading-tight">
+        Refine the <span class="text-[#0058bc] italic">Narrative.</span>
+      </h2>
+      <p class="text-lg text-[#515981] max-w-xl leading-relaxed">
+        Transform dense information into curated insights using the power of Editorial Intelligence.
+      </p>
+    </header>
+
+    <!-- SPLIT PANE -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+
+      <!-- LEFT: INPUT -->
+      <section class="flex flex-col h-full">
+        <div class="bg-white rounded-xl p-7 editorial-shadow flex flex-col gap-5 flex-grow"
+             style="outline:1px solid rgba(162,171,215,0.15);">
+
+          <div class="flex items-center justify-between">
+            <label class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#232c51]">Input Text</label>
+            <span id="word-count" class="text-xs font-['Inter'] text-[#515981] uppercase tracking-widest count-ok">
+              0 / 5000 Words
+            </span>
+          </div>
+
+          <!-- Options -->
+          <div class="flex flex-wrap gap-3 items-center">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-[#515981] font-medium">Length:</span>
+              <select id="length-select"
+                class="text-xs bg-[#efefff] border-none rounded-lg px-3 py-1.5 text-[#232c51] font-semibold cursor-pointer focus:ring-2 focus:ring-[#0058bc]/20">
+                <option value="concise">Concise</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-[#515981] font-medium">Tone:</span>
+              <select id="tone-select"
+                class="text-xs bg-[#efefff] border-none rounded-lg px-3 py-1.5 text-[#232c51] font-semibold cursor-pointer focus:ring-2 focus:ring-[#0058bc]/20">
+                <option value="neutral" selected>Neutral</option>
+                <option value="academic">Academic</option>
+                <option value="casual">Casual</option>
+              </select>
+            </div>
+          </div>
+
+          <textarea id="input-text"
+            class="flex-grow w-full bg-[#efefff] border-none rounded-xl p-5 font-['Inter'] text-[#232c51] resize-none min-h-[340px] text-sm leading-relaxed transition-all"
+            placeholder="Paste your long-form article, research paper, or report here to begin curation...">
+          </textarea>
+
+          <button id="summarize-btn" onclick="handleSummarize()"
+            class="summarize-btn w-full py-4 text-white font-['Plus_Jakarta_Sans'] font-bold rounded-xl flex items-center justify-center gap-2 text-base transition-all">
+            <span class="material-symbols-outlined text-xl">auto_fix_high</span>
+            Summarize
+          </button>
+        </div>
+      </section>
+
+      <!-- RIGHT: OUTPUT -->
+      <section class="flex flex-col h-full">
+        <div class="bg-[#dde1ff] rounded-xl editorial-shadow flex flex-col flex-grow overflow-hidden"
+             style="outline:1px solid rgba(162,171,215,0.15);">
+
+          <!-- Tab bar -->
+          <div class="px-7 pt-7 pb-4">
+            <div class="flex items-center justify-between mb-5">
+              <h3 class="font-['Plus_Jakarta_Sans'] font-bold text-lg text-[#232c51]">Curation View</h3>
+              <div class="bg-[#d5dbff] p-1 rounded-xl flex gap-1">
+                <button class="tab-btn active px-3 py-1.5 text-xs rounded-lg"
+                        onclick="switchTab('pointwise', this)">Pointwise</button>
+                <button class="tab-btn px-3 py-1.5 text-xs text-[#515981] rounded-lg"
+                        onclick="switchTab('hierarchical', this)">Hierarchical</button>
+                <button class="tab-btn px-3 py-1.5 text-xs text-[#515981] rounded-lg"
+                        onclick="switchTab('visual', this)">Visual</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Output area -->
+          <div id="output-content" class="px-7 pb-4 flex-grow overflow-y-auto min-h-[300px]">
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full py-12 text-center">
+              <div class="w-16 h-16 bg-white/60 rounded-2xl flex items-center justify-center mb-4 editorial-shadow">
+                <span class="material-symbols-outlined text-3xl text-[#0058bc]">auto_awesome</span>
+              </div>
+              <p class="text-[#515981] text-sm font-medium max-w-xs leading-relaxed">
+                Paste your text on the left and click
+                <strong class="text-[#0058bc]">Summarize</strong> to generate a curated view.
+              </p>
+            </div>
+            <div id="dynamic-output" class="hidden"></div>
+          </div>
+
+          <!-- Footer actions -->
+          <div class="px-5 py-4 bg-white/50 flex items-center justify-between gap-4"
+               style="backdrop-filter:blur(12px);">
+            <div class="flex gap-1">
+              <button onclick="copyOutput()"
+                class="p-2.5 text-[#0058bc] hover:bg-[#0058bc]/10 rounded-full transition-all active:scale-95"
+                title="Copy to Clipboard">
+                <span class="material-symbols-outlined text-xl">content_copy</span>
+              </button>
+              <button onclick="exportText()"
+                class="p-2.5 text-[#0058bc] hover:bg-[#0058bc]/10 rounded-full transition-all active:scale-95"
+                title="Export as text">
+                <span class="material-symbols-outlined text-xl">download</span>
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="clearAll()"
+                class="px-5 py-2 text-[#515981] font-semibold text-sm hover:bg-white/60 rounded-lg transition-colors">
+                Clear
+              </button>
+              <button onclick="saveToLibrary()"
+                class="px-5 py-2 bg-[#0058bc] text-white font-bold text-sm rounded-lg hover:brightness-110 transition-all active:scale-95">
+                Save to Library
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- BENTO FEATURES -->
+    <section class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 bg-[#c7cfff] rounded-xl p-10 overflow-hidden relative group cursor-pointer"
+           onclick="focusVisualTab()">
+        <div class="relative z-10 max-w-sm">
+          <span class="px-3 py-1 bg-[#3953b7] text-white text-[10px] font-bold rounded-full uppercase tracking-widest mb-4 inline-block">
+            New Feature
+          </span>
+          <h4 class="font-['Plus_Jakarta_Sans'] text-3xl font-bold text-[#213ea2] mb-3">
+            Semantic Graph Mapping
+          </h4>
+          <p class="font-['Inter'] text-[#213ea2]/80 text-sm mb-6 leading-relaxed">
+            Visualize the connections between your ideas with our new spatial intelligence engine.
+          </p>
+          <button class="px-6 py-3 bg-[#213ea2] text-white font-bold rounded-xl hover:opacity-90 transition-opacity text-sm">
+            Try Visual Mode
+          </button>
+        </div>
+        <div class="absolute -right-12 -bottom-12 w-80 h-80 bg-white/20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+        <div class="absolute right-6 top-6 opacity-20 group-hover:opacity-30 transition-opacity">
+          <svg width="160" height="160" viewBox="0 0 160 160" fill="none">
+            <circle cx="80" cy="80" r="40" stroke="#213ea2" stroke-width="2"/>
+            <circle cx="30" cy="40" r="18" stroke="#213ea2" stroke-width="2"/>
+            <circle cx="130" cy="40" r="18" stroke="#213ea2" stroke-width="2"/>
+            <circle cx="30" cy="120" r="18" stroke="#213ea2" stroke-width="2"/>
+            <circle cx="130" cy="120" r="18" stroke="#213ea2" stroke-width="2"/>
+            <line x1="46" y1="50" x2="55" y2="62" stroke="#213ea2" stroke-width="1.5"/>
+            <line x1="114" y1="50" x2="105" y2="62" stroke="#213ea2" stroke-width="1.5"/>
+            <line x1="46" y1="110" x2="55" y2="98" stroke="#213ea2" stroke-width="1.5"/>
+            <line x1="114" y1="110" x2="105" y2="98" stroke="#213ea2" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-8 editorial-shadow flex flex-col justify-between cursor-pointer group"
+           style="outline:1px solid rgba(162,171,215,0.15);">
+        <div class="w-12 h-12 bg-[#6d9fff]/20 rounded-xl flex items-center justify-center text-[#0058bc] mb-6 group-hover:bg-[#6d9fff]/30 transition-colors">
+          <span class="material-symbols-outlined">history_edu</span>
+        </div>
+        <div>
+          <h4 class="font-['Plus_Jakarta_Sans'] text-xl font-bold mb-2 text-[#232c51]">Library Search</h4>
+          <p class="font-['Inter'] text-sm text-[#515981] leading-relaxed">
+            Instant access to every summary you've ever generated with semantic search.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- MOBILE BOTTOM NAV -->
+<footer class="md:hidden fixed bottom-0 left-0 w-full bg-white editorial-shadow flex justify-around items-center py-3 px-6 z-40">
+  <button class="flex flex-col items-center gap-1 text-[#0058bc]">
+    <span class="material-symbols-outlined text-xl"
+          style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">dashboard</span>
+    <span class="text-[10px] font-bold">Home</span>
+  </button>
+  <button class="flex flex-col items-center gap-1 text-[#515981]">
+    <span class="material-symbols-outlined text-xl">folder_open</span>
+    <span class="text-[10px] font-medium">Library</span>
+  </button>
+  <button class="flex flex-col items-center gap-1 text-[#515981]">
+    <span class="material-symbols-outlined text-xl">history</span>
+    <span class="text-[10px] font-medium">History</span>
+  </button>
+  <button class="flex flex-col items-center gap-1 text-[#515981]">
+    <span class="material-symbols-outlined text-xl">settings</span>
+    <span class="text-[10px] font-medium">Settings</span>
+  </button>
+</footer>
+
+<!-- COPY / SAVE TOAST -->
+<div id="copy-toast"
+     class="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 bg-[#232c51] text-white px-5 py-2.5 rounded-full text-sm font-semibold editorial-shadow opacity-0 z-50">
+  ✓ Copied to clipboard
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────────────────────────
+// CONFIG — change this to your deployed backend URL in production
+// ─────────────────────────────────────────────────────────────────
+const API = 'http://localhost:8080';
+
+// ─────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────
+let authToken    = localStorage.getItem('auth_token') || null;
+let currentUser  = localStorage.getItem('auth_email') || null;
+let currentTab   = 'pointwise';
+let currentOutput = { pointwise: null, hierarchical: null, visual: null };
+let sessionCount = 0;
+let sessionWords = 0;
+let isLoading    = false;
+let authMode     = 'login'; // 'login' | 'register'
+
+// ─────────────────────────────────────────────────────────────────
+// INIT — on page load
+// ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (authToken && currentUser) {
+    onLoginSuccess(currentUser, false);
+  } else {
+    showAuthModal();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// AUTH MODAL
+// ─────────────────────────────────────────────────────────────────
+function showAuthModal() {
+  document.getElementById('auth-modal').classList.remove('hidden');
+  document.getElementById('auth-email').focus();
+}
+
+function hideAuthModal() {
+  document.getElementById('auth-modal').classList.add('hidden');
+  document.getElementById('auth-error').classList.add('hidden');
+  document.getElementById('auth-error').textContent = '';
+}
+
+function setAuthTab(mode) {
+  authMode = mode;
+  const loginBtn    = document.getElementById('tab-login');
+  const registerBtn = document.getElementById('tab-register');
+  const submitBtn   = document.getElementById('auth-submit-btn');
+
+  if (mode === 'login') {
+    loginBtn.classList.add('bg-white', 'shadow-sm', 'text-[#0058bc]');
+    loginBtn.classList.remove('text-[#515981]');
+    registerBtn.classList.remove('bg-white', 'shadow-sm', 'text-[#0058bc]');
+    registerBtn.classList.add('text-[#515981]');
+    submitBtn.textContent = 'Sign in';
+  } else {
+    registerBtn.classList.add('bg-white', 'shadow-sm', 'text-[#0058bc]');
+    registerBtn.classList.remove('text-[#515981]');
+    loginBtn.classList.remove('bg-white', 'shadow-sm', 'text-[#0058bc]');
+    loginBtn.classList.add('text-[#515981]');
+    submitBtn.textContent = 'Create account';
+  }
+
+  document.getElementById('auth-error').classList.add('hidden');
+}
+
+async function handleAuthSubmit() {
+  if (authMode === 'login') {
+    await doLogin();
+  } else {
+    await doRegister();
+  }
+}
+
+// Allow Enter key in auth inputs
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !document.getElementById('auth-modal').classList.contains('hidden')) {
+    handleAuthSubmit();
+  }
+});
+
+async function doLogin() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-error');
+  const btn      = document.getElementById('auth-submit-btn');
+
+  if (!email || !password) {
+    showAuthError('Please enter your email and password.');
+    return;
+  }
+
+  btn.innerHTML = '<span class="animate-spin material-symbols-outlined text-lg">progress_activity</span>';
+  btn.disabled  = true;
+
+  try {
+    const res = await fetch(`${API}/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Invalid email or password.');
+    }
+
+    const data = await res.json();
+    authToken   = data.token;
+    currentUser = email;
+    localStorage.setItem('auth_token', authToken);
+    localStorage.setItem('auth_email', email);
+
+    onLoginSuccess(email, true);
+
+  } catch (e) {
+    showAuthError(e.message);
+  } finally {
+    btn.innerHTML = authMode === 'login' ? 'Sign in' : 'Create account';
+    btn.disabled  = false;
+  }
+}
+
+async function doRegister() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-submit-btn');
+
+  if (!email || !password) {
+    showAuthError('Please enter your email and password.');
+    return;
+  }
+  if (password.length < 8) {
+    showAuthError('Password must be at least 8 characters.');
+    return;
+  }
+
+  btn.innerHTML = '<span class="animate-spin material-symbols-outlined text-lg">progress_activity</span>';
+  btn.disabled  = true;
+
+  try {
+    const res = await fetch(`${API}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Registration failed. Email may already be in use.');
+    }
+
+    // Auto-login after register
+    await doLogin();
+
+  } catch (e) {
+    showAuthError(e.message);
+    btn.innerHTML = 'Create account';
+    btn.disabled  = false;
+  }
+}
+
+function onLoginSuccess(email, fresh) {
+  hideAuthModal();
+
+  const initials = email.substring(0, 2).toUpperCase();
+  document.getElementById('user-avatar').textContent      = initials;
+  document.getElementById('pill-avatar').textContent      = initials;
+  document.getElementById('pill-email').textContent       = email;
+  document.getElementById('user-pill').classList.remove('hidden');
+  document.getElementById('logout-btn').classList.remove('hidden');
+
+  if (fresh) showToast('✓ Signed in successfully');
+}
+
+function doLogout() {
+  authToken   = null;
+  currentUser = null;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_email');
+
+  document.getElementById('user-avatar').textContent = '?';
+  document.getElementById('user-pill').classList.add('hidden');
+  document.getElementById('logout-btn').classList.add('hidden');
+
+  clearAll();
+  showAuthModal();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// WORD COUNTER
+// ─────────────────────────────────────────────────────────────────
+document.getElementById('input-text').addEventListener('input', function () {
+  const words = this.value.trim() === '' ? 0 : this.value.trim().split(/\s+/).length;
+  const el    = document.getElementById('word-count');
+  el.textContent = `${words.toLocaleString()} / 5000 Words`;
+  el.className   = words > 5000
+    ? 'text-xs font-Inter text-[#b31b25] uppercase tracking-widest count-warn'
+    : 'text-xs font-Inter text-[#515981] uppercase tracking-widest count-ok';
+});
+
+// ─────────────────────────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────────────────────────
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.style.color = '';
+  });
+  btn.classList.add('active');
+
+  if (currentOutput[tab] !== null) {
+    renderOutput(tab, currentOutput[tab]);
+  }
+  // All 3 views come back in one backend response, so no re-fetch needed per tab
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MAIN SUMMARIZE — single backend call, all 3 views returned
+// ─────────────────────────────────────────────────────────────────
+async function handleSummarize() {
+  const text = document.getElementById('input-text').value.trim();
+  if (!text) { shakeTextarea(); return; }
+
+  const words = text.split(/\s+/).length;
+  if (words > 5000) { alert('Please keep input under 5000 words.'); return; }
+
+  if (!authToken) { showAuthModal(); return; }
+
+  currentOutput = { pointwise: null, hierarchical: null, visual: null };
+  showLoading();
+
+  const length = document.getElementById('length-select').value;
+  const tone   = document.getElementById('tone-select').value;
+
+  try {
+    const response = await fetch(`${API}/api/summarize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ text, length, tone })
+    });
+
+    if (response.status === 401) {
+      doLogout();
+      showAuthError('Session expired. Please sign in again.');
+      return;
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error ${response.status}`);
+    }
+
+    // Backend returns: { pointwise: { points: [...] }, hierarchical: { sections: [...] }, visual: { center, nodes } }
+    const data = await response.json();
+
+    currentOutput.pointwise    = data.pointwise?.points    ?? [];
+    currentOutput.hierarchical = data.hierarchical         ?? { sections: [] };
+    currentOutput.visual       = data.visual               ?? { center: '', nodes: [] };
+
+    // Update session stats
+    sessionCount++;
+    sessionWords += words;
+    document.getElementById('stat-count').textContent = sessionCount;
+    document.getElementById('stat-words').textContent = sessionWords.toLocaleString();
+
+    renderOutput(currentTab, currentOutput[currentTab]);
+
+  } catch (e) {
+    showError(e.message || 'Could not generate summary. Please try again.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RENDER OUTPUTS
+// ─────────────────────────────────────────────────────────────────
+function renderOutput(tab, data) {
+  hideLoading();
+
+  const emptyState    = document.getElementById('empty-state');
+  const dynamicOutput = document.getElementById('dynamic-output');
+  emptyState.classList.add('hidden');
+  dynamicOutput.classList.remove('hidden');
+
+  const content = document.getElementById('output-content');
+  content.classList.add('fading');
+
+  setTimeout(() => {
+    if (tab === 'pointwise') {
+      const points = Array.isArray(data) ? data : (data?.points || []);
+      dynamicOutput.innerHTML = `
+        <div class="space-y-3 py-2">
+          ${points.map((p, i) => `
+            <div class="point-item flex gap-4 p-4 rounded-xl hover:bg-white/50 transition-colors cursor-default"
+                 style="animation-delay:${i * 0.07}s">
+              <div class="w-2 h-2 mt-2 rounded-full bg-[#0058bc] flex-shrink-0"></div>
+              <p class="font-['Inter'] text-[#232c51] text-sm leading-relaxed">${escapeHtml(p)}</p>
+            </div>
+          `).join('')}
+        </div>`;
+
+    } else if (tab === 'hierarchical') {
+      const sections = data?.sections || [];
+      dynamicOutput.innerHTML = `
+        <div class="space-y-6 py-2">
+          ${sections.map((sec, si) => `
+            <div class="hier-section" style="animation-delay:${si * 0.1}s">
+              <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-base text-[#0058bc] mb-3 flex items-center gap-2">
+                <span class="w-6 h-6 bg-[#0058bc] text-white rounded-md flex items-center justify-center text-xs font-bold">${si + 1}</span>
+                ${escapeHtml(sec.title || '')}
+              </h4>
+              <div class="pl-8 space-y-2">
+                ${(sec.points || []).map(pt => `
+                  <div class="flex gap-3 items-start">
+                    <div class="w-1.5 h-1.5 mt-2 rounded-full bg-[#6d9fff] flex-shrink-0"></div>
+                    <p class="text-sm text-[#232c51] leading-relaxed font-['Inter']">${escapeHtml(pt)}</p>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+
+    } else if (tab === 'visual') {
+      const center = data?.center || 'Main Topic';
+      const nodes  = data?.nodes  || [];
+      dynamicOutput.innerHTML = `
+        <div class="py-4">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 bg-[#0058bc] text-white px-6 py-3 rounded-2xl font-['Plus_Jakarta_Sans'] font-bold text-base editorial-shadow">
+              <span class="material-symbols-outlined text-xl"
+                    style="font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">hub</span>
+              ${escapeHtml(center)}
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${nodes.map((node, i) => `
+              <div class="visual-node bg-white rounded-xl p-4 editorial-shadow cursor-default group">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 bg-[#efefff] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-[#6d9fff]/20 transition-colors">
+                    <span class="text-[#0058bc] font-bold text-xs font-['Plus_Jakarta_Sans']">${String.fromCharCode(65 + i)}</span>
+                  </div>
+                  <div>
+                    <p class="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#232c51] mb-1">${escapeHtml(node.label || '')}</p>
+                    <p class="text-xs text-[#515981] font-['Inter'] leading-relaxed">${escapeHtml(node.description || '')}</p>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    content.classList.remove('fading');
+  }, 200);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LOADING / ERROR STATES
+// ─────────────────────────────────────────────────────────────────
+function showLoading() {
+  isLoading = true;
+  document.getElementById('empty-state').classList.add('hidden');
+  const dynamicOutput = document.getElementById('dynamic-output');
+  dynamicOutput.classList.remove('hidden');
+  dynamicOutput.innerHTML = `
+    <div class="space-y-4 py-2">
+      ${[1, 2, 3, 4].map((_, i) => `
+        <div class="flex gap-4 p-4">
+          <div class="w-2 h-2 mt-2 rounded-full bg-[#d5dbff] flex-shrink-0"></div>
+          <div class="flex-1 space-y-2">
+            <div class="skeleton h-3 rounded w-full"></div>
+            <div class="skeleton h-3 rounded w-4/5"></div>
+            ${i % 2 === 0 ? '<div class="skeleton h-3 rounded w-3/5"></div>' : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  const btn = document.getElementById('summarize-btn');
+  btn.innerHTML = `<span class="animate-spin material-symbols-outlined text-xl">progress_activity</span> Curating...`;
+  btn.disabled  = true;
+  btn.style.opacity = '0.75';
+}
+
+function hideLoading() {
+  isLoading = false;
+  const btn = document.getElementById('summarize-btn');
+  btn.innerHTML = `<span class="material-symbols-outlined text-xl">auto_fix_high</span> Summarize`;
+  btn.disabled  = false;
+  btn.style.opacity = '1';
+}
+
+function showError(msg) {
+  hideLoading();
+  document.getElementById('empty-state').classList.add('hidden');
+  const dynamicOutput = document.getElementById('dynamic-output');
+  dynamicOutput.classList.remove('hidden');
+  dynamicOutput.innerHTML = `
+    <div class="flex flex-col items-center justify-center py-12 text-center">
+      <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-4">
+        <span class="material-symbols-outlined text-2xl text-red-400">error_outline</span>
+      </div>
+      <p class="text-[#515981] text-sm max-w-xs">${escapeHtml(msg)}</p>
+      <button onclick="handleSummarize()"
+        class="mt-4 px-4 py-2 text-xs font-semibold text-[#0058bc] border border-[#0058bc]/20 rounded-lg hover:bg-[#efefff] transition-colors">
+        Try again
+      </button>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SAVE TO LIBRARY — real backend call
+// ─────────────────────────────────────────────────────────────────
+async function saveToLibrary() {
+  const text = document.getElementById('input-text').value.trim();
+  if (!text) { showToast('Nothing to save yet.'); return; }
+  if (!authToken) { showAuthModal(); return; }
+
+  try {
+    const res = await fetch(`${API}/api/library`, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        text,
+        length: document.getElementById('length-select').value,
+        tone:   document.getElementById('tone-select').value
+      })
+    });
+
+    if (!res.ok) throw new Error('Save failed');
+    showToast('✓ Saved to Library');
+
+  } catch (e) {
+    showToast('Could not save — try again.');
+    console.error(e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function shakeTextarea() {
+  const ta = document.getElementById('input-text');
+  ta.style.boxShadow = '0 0 0 2px rgba(179,27,37,0.3)';
+  setTimeout(() => { ta.style.boxShadow = ''; }, 1200);
+  ta.focus();
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('copy-toast');
+  toast.textContent  = msg;
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity  = '0';
+    toast.textContent    = '✓ Copied to clipboard';
+  }, 2200);
+}
+
+function copyOutput() {
+  const el   = document.getElementById('dynamic-output');
+  const text = el ? el.innerText : '';
+  if (!text.trim()) return;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Copied to clipboard'));
+}
+
+function exportText() {
+  const el   = document.getElementById('dynamic-output');
+  const text = el ? el.innerText : '';
+  if (!text.trim()) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'summary.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAll() {
+  document.getElementById('input-text').value  = '';
+  document.getElementById('word-count').textContent = '0 / 5000 Words';
+  currentOutput = { pointwise: null, hierarchical: null, visual: null };
+  document.getElementById('empty-state').classList.remove('hidden');
+  document.getElementById('dynamic-output').classList.add('hidden');
+  document.getElementById('dynamic-output').innerHTML = '';
+  hideLoading();
+}
+
+function focusVisualTab() {
+  const visBtns = document.querySelectorAll('.tab-btn');
+  switchTab('visual', visBtns[2]);
+  document.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2')
+    .scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
