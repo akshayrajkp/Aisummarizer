@@ -1,0 +1,84 @@
+# ===============================
+# 🚫 Maven / Build output
+# ===============================
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ===============================
+# 🚫 Logs
+# ===============================
+logs/
+*.log
+
+# ===============================
+# 🚫 OS generated files
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# 🚫 IDE files
+# ===============================
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# ===============================
+# 🚫 Environment / Secrets
+# ===============================
+.env
+*.env
+
+# Ignore ALL application configs (your requirement)
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+src/main/resources/application-*.yml
+src/main/resources/application-*.yaml
+
+# Optional: if you want to ignore even base config
+application.properties
+
+# ===============================
+# 🚫 Temporary files
+# ===============================
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+
+# ===============================
+# 🚫 Test output
+# ===============================
+surefire-reports/
+failsafe-reports/
+
+# ===============================
+# 🚫 Coverage reports
+# ===============================
+coverage/
+*.exec
+
+# ===============================
+# 🚫 Node (if frontend inside project)
+# ===============================
+node_modules/
+
+# ===============================
+# 🚫 Misc
+# ===============================
+*.pid
+*.seed
+*.lock
