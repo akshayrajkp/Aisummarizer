@@ -7,42 +7,49 @@ public class PromptBuilderService {
 
     public String buildPointwise(String text, String length, String tone) {
         return """
-            You are an editorial AI summarizer. Extract key points from the text below.
-            Return ONLY a JSON array of strings — no markdown, no preamble, no explanation.
-            Length: %s. Tone: %s. Aim for 4-8 points.
-
-            TEXT:
-            %s
-
-            Respond with only valid JSON like: ["Point one", "Point two", "Point three"]
-            """.formatted(length, tone, text);
+            Return ONLY a JSON array of strings. No explanation, no markdown, no extra text.
+            Extract 4 key points from the text. Tone: %s.
+            
+            Example output: ["Point one","Point two","Point three","Point four"]
+            
+            TEXT: %s
+            
+            JSON array only:
+            """.formatted(tone, truncate(text));
     }
 
     public String buildHierarchical(String text, String length, String tone) {
         return """
-            You are an editorial AI summarizer. Create a hierarchical outline of the text below.
-            Return ONLY a JSON object — no markdown, no preamble, no explanation.
-            Structure: { "sections": [ { "title": "...", "points": ["...", "..."] } ] }
-            Length: %s. Tone: %s. Aim for 2-4 sections with 2-4 points each.
-
-            TEXT:
-            %s
-
-            Respond with only valid JSON.
-            """.formatted(length, tone, text);
+            Return ONLY a JSON object. No explanation, no markdown, no extra text.
+            Create 2 sections with 2 points each. Tone: %s.
+            
+            Example output: {"sections":[{"title":"Section One","points":["Point a","Point b"]},{"title":"Section Two","points":["Point c","Point d"]}]}
+            
+            TEXT: %s
+            
+            JSON object only:
+            """.formatted(tone, truncate(text));
     }
 
     public String buildVisual(String text, String length, String tone) {
         return """
-            You are an editorial AI summarizer. Extract the main concept and related ideas for a visual map.
-            Return ONLY a JSON object — no markdown, no preamble, no explanation.
-            Structure: { "center": "Main Topic", "nodes": [ { "label": "...", "description": "..." } ] }
-            Include 4-7 nodes. Length: %s. Tone: %s.
+            Return ONLY a JSON object. No explanation, no markdown, no extra text.
+            Extract 1 main topic and 4 related concepts. Tone: %s.
+            
+            Example output: {"center":"Main Topic","nodes":[{"label":"Concept A","description":"brief detail"},{"label":"Concept B","description":"brief detail"},{"label":"Concept C","description":"brief detail"},{"label":"Concept D","description":"brief detail"}]}
+            
+            TEXT: %s
+            
+            JSON object only:
+            """.formatted(tone, truncate(text));
+    }
 
-            TEXT:
-            %s
-
-            Respond with only valid JSON.
-            """.formatted(length, tone, text);
+    // Truncate input text to avoid overloading the model context
+    private String truncate(String text) {
+        int maxChars = 1500;
+        if (text == null) return "";
+        return text.length() > maxChars
+                ? text.substring(0, maxChars) + "..."
+                : text;
     }
 }
