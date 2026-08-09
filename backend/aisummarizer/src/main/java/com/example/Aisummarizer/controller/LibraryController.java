@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/library")
-public class LibraryController {
+public class  LibraryController {
 
     private final SummaryRepository summaryRepository;
     private final UserRepository    userRepository;
