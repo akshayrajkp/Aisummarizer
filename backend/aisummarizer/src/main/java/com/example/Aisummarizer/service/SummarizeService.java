@@ -16,11 +16,11 @@ public class SummarizeService {
 
     private static final Logger log = LoggerFactory.getLogger(SummarizeService.class);
 
-    private final OllamaClientService  ollamaClient;
+    private final AiClientService ollamaClient;
     private final PromptBuilderService promptBuilder;
     private final ObjectMapper         objectMapper;
 
-    public SummarizeService(OllamaClientService ollamaClient,
+    public SummarizeService(AiClientService ollamaClient,
                             PromptBuilderService promptBuilder,
                             ObjectMapper objectMapper) {
         this.ollamaClient  = ollamaClient;
